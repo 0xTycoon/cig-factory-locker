@@ -1,0 +1,86 @@
+/*
+* Sample hardhat config file used for running tests.
+*/
+
+require("hardhat-gas-reporter");
+require("@nomicfoundation/hardhat-chai-matchers");
+// This is a sample Hardhat task. To learn how to create your own go to
+// https://hardhat.org/guides/create-task.html
+task("accounts", "Prints the list of accounts", async () => {
+    const accounts = await ethers.getSigners();
+
+    for (const account of accounts) {
+        console.log(account.address);
+    }
+});
+
+// You need to export an object to set up your config
+// Go to https://hardhat.org/config/ to learn more
+
+
+/**
+ * @type import('hardhat/config').HardhatUserConfig
+ */
+module.exports = {
+    solidity: {
+        version: "0.8.20",
+        settings: {
+            optimizer: {
+                enabled: true,
+                runs: 200
+            },
+
+        },
+
+
+    },
+    mocha: {
+        timeout: 90000
+    },
+    defaultNetwork: "hardhat",
+    networks: {
+
+        // when running the migration-test.js or stogie.js
+        // uncomment the following and get an API key from https://www.alchemy.com/
+        // /*
+        hardhat: {
+            forking: {
+                url: "https://eth-mainnet.alchemyapi.io/v2/YOUR-API-KEY-HERE",
+
+                blockNumber: 17610499
+            },
+            allowUnlimitedContractSize: true
+        },
+
+        // */
+
+        mytest: {
+
+
+
+            url : "http://localhost:8545",
+            chainId: 31337,
+
+                },
+
+        forkedLocal: {
+            url: "http://miranda:8545",
+            chainId: 1,
+            forking: {
+                url: "http://127.0.0.1:8545",
+                blockNumber: 14324068
+            }
+        },
+        alchemy: {
+            url: "http://localhost:8545",
+            chainId: 1337
+
+        },
+        ganache: {
+            url: "http://127.0.0.1:7545",
+            chainId: 1,
+
+        }
+    }
+};
+
