@@ -4,7 +4,7 @@
 // lock liquidity
 pragma solidity ^0.8.20;
 
-//import "hardhat/console.sol";
+import "hardhat/console.sol";
 
 /*
 This contract's lock() function is used to deposit CIG/ETH SLP tokens to the
@@ -69,7 +69,7 @@ contract Locker {
     function withdraw() external onlyOwner {
         require (block.timestamp > withdrawAt, "still locked");
         cig.harvest();
-        ICigToken.UserInfo memory farm = cig.farmers(msg.sender);
+        ICigToken.UserInfo memory farm = cig.farmers(address(this));
         cig.emergencyWithdraw();
         cigEthSLP.transfer(msg.sender, farm.deposit);           // send back the SLP
         cig.transfer(msg.sender, cig.balanceOf(address(this))); // send back any remaining cig
