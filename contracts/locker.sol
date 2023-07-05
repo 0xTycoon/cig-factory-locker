@@ -48,6 +48,11 @@ contract Locker {
     ICigToken private immutable cig;                   // 0xCB56b52316041A62B6b5D0583DcE4A8AE7a3C629
     ILiquidityPool private immutable cigEthSLP;        // 0x22b15c7ee1186a7c7cffb2d942e20fc228f6e4ed (SLP, it's also an ERC20)
 
+    /**
+    * @param _cig the Cigarette token address 0xCB56b52316041A62B6b5D0583DcE4A8AE7a3C629
+    * @param _slp the CIG/ETH SLP address (Sushiswap liquidity pool tokens)
+    * @param _withdrawAt a future unix timestamp of some
+    */
     constructor (address _cig, address _slp, uint64 _withdrawAt) {
         admin = msg.sender;
         emit OwnershipTransferred(address(0), msg.sender);
@@ -68,18 +73,26 @@ contract Locker {
     */
     function withdraw() external onlyOwner {
         require (block.timestamp > withdrawAt, "still locked");
-        cig.harvest();
+        cig.harvest();                                          // important to harvest first
         ICigToken.UserInfo memory farm = cig.farmers(address(this));
-        cig.emergencyWithdraw();
+        cig.emergencyWithdraw();                                // Cig has a bug with withdraw()
         cigEthSLP.transfer(msg.sender, farm.deposit);           // send back the SLP
         cig.transfer(msg.sender, cig.balanceOf(address(this))); // send back any remaining cig
     }
 
+    /**
+    * After renouncing ownership, nobody will be able to withdraw the SLP or
+    * modify the stipends
+    */
     function renounceOwnership() public onlyOwner {
         emit OwnershipTransferred(admin, address(0));
-        admin = address(0);
+        admin = address(0);                                     // set to the null address
     }
 
+    /**
+    * Ownership transfer
+    * @param _to the address to transfer to
+    */
     function transferOwnership(address _to) public onlyOwner {
         require(_to != address(0), "_to must not be 0x0");
         emit OwnershipTransferred(admin, _to);
@@ -90,6 +103,14 @@ contract Locker {
     * grant grants a stipend for a caller. When harvest() is called with
     * msg.sender as the caller, the contract will send _amount to _to
     * Must wait _period of blocks between calls.
+    * @param _caller is the address for whom you will be giving a stipend
+    * @param _to is the address to where the CIG will be sent to after _caller
+    *    calls harvest.
+    * @param _amount how much CIG to send back to _to, each harvest() call.
+    *    If not enough CIG, then it will only send the remaining CIG in the
+    *    contract.
+    * @param _period how many blocks must pass for the _caller to be able to
+    *    make another call. This is a rate-limiting feature.
     */
     function grant(
         address _caller,
@@ -107,7 +128,8 @@ contract Locker {
     }
 
     /**
-    * revoke revokes a given stipend for the _caller
+    * revoke revokes a given stipend for the _caller. Only admin can call
+    * and cannot be used after ownership has been revoked
     */
     function revoke(address _caller) external onlyOwner {
         require (stipends[_caller].to != address(0), "invalid stipend");
@@ -116,7 +138,9 @@ contract Locker {
     }
 
     /**
-    * @dev lock liquidity forever. There is no way to withdraw
+    * @dev lock liquidity. Can be withdrawn through withdraw(), subject to the
+    *    withdrawAt timestamp
+    * @param _amount how much SLP tokens to withdraw
     */
     function lock(uint256 _amount) external {
         cigEthSLP.transferFrom(
@@ -128,7 +152,7 @@ contract Locker {
     }
 
     /**
-    * @dev harvest CIG. If msg.sender has stipend then send their CIG
+    * @dev harvest CIG. If msg.sender has a stipend, then send their CIG to _to
     */
 
     function harvest() external {
